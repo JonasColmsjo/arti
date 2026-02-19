@@ -1,0 +1,40 @@
+t1:
+  ips:
+    - 10.10.200.207
+    - 10.10.2.10
+    - 172.16.4.200
+  domains:
+    - evil-corp.example.com
+    - suspicious-host.net
+  hashes:
+    - d41d8cd98f00b204e9800998ecf8427e
+  ports:
+    - 4444
+    - 8443
+
+t2:
+  ips:
+    - 83.136.254.57
+    - 83.136.254.199
+    - 192.168.24.100
+  domains:
+    - topenergysupport.com
+  ports:
+    - 8443
+  timeframe:
+    - "2020-08-17"
+    - "2020-08-18"
+
+t3:
+  ips:
+    - 83.136.254.57
+  domains:
+    - topenergysupport.com
+
+search_paths:
+  t1:
+    - "work/tier1/**/*.csv"
+    - "work/tier1/**/*.md"
+  t2:
+    - "work/tier2/**/*.csv"
+    - "work/tier2/**/*.md"

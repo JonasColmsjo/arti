@@ -1,0 +1,27 @@
+# Report rendering - Final submission (human-edited)
+
+# List available targets
+list:
+    @just --list
+
+# Default recipe
+default: report
+
+# Render REFERENCES.qmd to PDF
+references:
+    quarto render REFERENCES.qmd --to pdf
+
+# Copy figures from claude-report
+figures:
+    mkdir -p ./figures
+    cp ../claude-report/figures/*.png ./figures/ 2>/dev/null || true
+
+# Render REPORT.qmd to PDF and open
+report: references figures
+    quarto render REPORT.qmd --to pdf
+    xdg-open REPORT.pdf
+
+# Clean generated files
+clean:
+    rm -f *.pdf *.html
+    rm -rf *_files

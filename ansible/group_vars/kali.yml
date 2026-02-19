@@ -1,0 +1,30 @@
+---
+# Security Tools - Kali Linux Configuration
+#
+# Kali already has most tools installed, so we focus on
+# Python tools, Go tools, and Claude agents
+#
+
+# Kali has most core tools pre-installed
+install_core: false
+
+# Add Python security packages
+install_python: true
+
+# Add nuclei
+install_go: true
+
+# Kali has most RE tools
+install_reverse_engineering: false
+
+# Kali has forensics tools
+install_forensics: false
+
+# Kali has wireless tools
+install_wireless: false
+
+# Kali has offensive tools
+install_offensive: false
+
+# Install Claude agents
+install_claude_agents: true

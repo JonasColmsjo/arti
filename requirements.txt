@@ -1,0 +1,22 @@
+# Forensic Analysis Framework Dependencies
+
+# Data processing
+pandas>=2.0.0
+polars>=1.0.0
+dpkt>=1.9.8
+
+# CLI
+click>=8.0.0
+
+# Configuration
+pyyaml>=6.0
+
+# Windows Event Log parsing
+python-evtx>=0.8.1
+
+# Required by python-evtx
+hexdump>=3.3
+libesedb-python
+
+# Windows registry hive parsing (full includes shellbag deps: pyfwsi)
+regipy[full]>=6.2.0

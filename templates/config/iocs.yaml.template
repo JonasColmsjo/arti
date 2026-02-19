@@ -1,0 +1,49 @@
+# IOC Database - Organized by Level and Type
+# For cross-level correlation searches
+
+l1:
+  # Level 1 IOCs
+  ips_external: []          # External (internet) IPs
+  ips_internal: []          # Internal network IPs
+  domains: []               # Domains of interest
+  usernames: []             # Compromised or suspicious accounts
+  hashes_sha256: []         # File hashes
+  filenames: []             # Suspicious filenames
+  ports: []                 # Unusual ports
+  processes: []             # Process names
+  mac_addresses: []         # MAC addresses of interest
+
+l2:
+  # Level 2 IOCs
+  ips_external: []
+  ips_internal: []
+  domains: []
+  usernames: []
+  credentials: []           # Captured credentials (e.g., "user:password")
+  hashes_sha256: []
+  filenames: []
+  ja3: []                   # JA3 fingerprints
+  ports: []
+  mac_addresses: []
+
+l3:
+  # Level 3 IOCs
+  ips_external: []
+  ips_internal: []
+  domains: []
+  usernames: []
+  hashes_sha256: []
+  filenames: []
+
+# Search paths per level (glob patterns relative to PROJECT_ROOT)
+# Used by ioc_search.py to find files to search
+search_paths:
+  l1:
+    - work/level1/automated/**/*.csv
+    - work/level1/timelines/*.csv
+  l2:
+    - work/level2/automated/**/*.csv
+    - work/level2/timelines/*.csv
+  l3:
+    - work/level3/automated/**/*.csv
+    - work/level3/timelines/*.csv

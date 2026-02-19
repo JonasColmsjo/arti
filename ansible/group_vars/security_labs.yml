@@ -1,0 +1,15 @@
+---
+# Security Tools - Security Lab Configuration
+#
+# Configuration for dedicated security testing labs
+#
+
+# Full installation for security labs
+install_core: true
+install_python: true
+install_go: true
+install_reverse_engineering: true
+install_forensics: true
+install_wireless: true
+install_offensive: true
+install_claude_agents: true

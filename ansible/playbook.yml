@@ -1,0 +1,308 @@
+---
+# Security Tools - Ansible Playbook
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml playbook.yml
+#   ansible-playbook -i inventory/hosts.yml playbook.yml --tags "core,python"
+#   ansible-playbook -i inventory/hosts.yml playbook.yml -e "install_offensive=true"
+#
+
+- name: Install Security Tools
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Control which tool categories to install
+    install_core: true
+    install_python: true
+    install_go: true
+    install_reverse_engineering: true
+    install_forensics: true
+    install_wireless: true
+    install_offensive: true
+    install_claude_agents: false
+
+    # Claude agent installation scope
+    claude_agents_scope: global  # global or local
+    claude_agents_user: "{{ ansible_user_id }}"
+
+  pre_tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      tags: always
+
+  tasks:
+    # ============================================================
+    # Core Security Tools
+    # ============================================================
+    - name: Install core security tools
+      when: install_core | bool
+      tags: core
+      block:
+        - name: Install core tools (Debian/Ubuntu)
+          apt:
+            name:
+              - nmap
+              - netcat-openbsd
+              - tcpdump
+              - tshark
+              - whois
+              - dnsutils
+              - curl
+              - wget
+              - jq
+              - git
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Install core tools (RedHat/Fedora)
+          dnf:
+            name:
+              - nmap
+              - nmap-ncat
+              - tcpdump
+              - wireshark-cli
+              - whois
+              - bind-utils
+              - curl
+              - wget
+              - jq
+              - git
+            state: present
+          when: ansible_os_family == "RedHat"
+
+    # ============================================================
+    # Python Security Tools
+    # ============================================================
+    - name: Install Python security tools
+      when: install_python | bool
+      tags: python
+      block:
+        - name: Ensure pip is installed (Debian/Ubuntu)
+          apt:
+            name:
+              - python3-pip
+              - python3-venv
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Ensure pip is installed (RedHat/Fedora)
+          dnf:
+            name:
+              - python3-pip
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install Python security packages
+          pip:
+            name:
+              - bandit
+              - semgrep
+              - shodan
+              - dnspython
+              - requests
+              - pwntools
+              - scapy
+            state: present
+            extra_args: --user
+          become: false
+
+    # ============================================================
+    # Go Tools (Nuclei)
+    # ============================================================
+    - name: Install Go security tools
+      when: install_go | bool
+      tags: go
+      block:
+        - name: Check if Go is installed
+          command: which go
+          register: go_installed
+          ignore_errors: true
+          changed_when: false
+
+        - name: Install Go (Debian/Ubuntu)
+          apt:
+            name: golang-go
+            state: present
+          when:
+            - ansible_os_family == "Debian"
+            - go_installed.rc != 0
+
+        - name: Install nuclei
+          command: go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          environment:
+            GOPATH: "{{ ansible_env.HOME }}/go"
+            PATH: "{{ ansible_env.PATH }}:{{ ansible_env.HOME }}/go/bin"
+          become: false
+          args:
+            creates: "{{ ansible_env.HOME }}/go/bin/nuclei"
+
+    # ============================================================
+    # Reverse Engineering Tools
+    # ============================================================
+    - name: Install reverse engineering tools
+      when: install_reverse_engineering | bool
+      tags: reversing
+      block:
+        - name: Install RE tools (Debian/Ubuntu)
+          apt:
+            name:
+              - binutils
+              - binwalk
+              - radare2
+              - gdb
+              - ltrace
+              - strace
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Install RE tools (RedHat/Fedora)
+          dnf:
+            name:
+              - binutils
+              - binwalk
+              - radare2
+              - gdb
+              - ltrace
+              - strace
+            state: present
+          when: ansible_os_family == "RedHat"
+
+        - name: Install frida-tools via pip
+          pip:
+            name: frida-tools
+            state: present
+            extra_args: --user
+          become: false
+
+        - name: Check if Ghidra is installed
+          stat:
+            path: /opt/ghidra
+          register: ghidra_installed
+
+        - name: Display Ghidra installation notice
+          debug:
+            msg: "Ghidra not installed. Download from https://ghidra-sre.org and extract to /opt/ghidra"
+          when: not ghidra_installed.stat.exists
+
+    # ============================================================
+    # Forensics Tools
+    # ============================================================
+    - name: Install forensics tools
+      when: install_forensics | bool
+      tags: forensics
+      block:
+        - name: Install forensics tools (Debian/Ubuntu)
+          apt:
+            name:
+              - sleuthkit
+              - autopsy
+              - foremost
+              - dc3dd
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Install volatility3 via pip
+          pip:
+            name: volatility3
+            state: present
+            extra_args: --user
+          become: false
+
+    # ============================================================
+    # Wireless Security Tools
+    # ============================================================
+    - name: Install wireless security tools
+      when: install_wireless | bool
+      tags: wireless
+      block:
+        - name: Install wireless tools (Debian/Ubuntu)
+          apt:
+            name:
+              - aircrack-ng
+              - reaver
+              - mdk4
+              - hostapd
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Install wireless tools (RedHat/Fedora)
+          dnf:
+            name:
+              - aircrack-ng
+            state: present
+          when: ansible_os_family == "RedHat"
+
+    # ============================================================
+    # Offensive Security Tools
+    # ============================================================
+    - name: Install offensive security tools
+      when: install_offensive | bool
+      tags: offensive
+      block:
+        - name: Install offensive tools (Debian/Ubuntu)
+          apt:
+            name:
+              - hashcat
+              - hydra
+              - john
+              - sqlmap
+              - gobuster
+              - dirb
+              - nikto
+            state: present
+          when: ansible_os_family == "Debian"
+
+        - name: Create wordlists directory
+          file:
+            path: /usr/share/wordlists
+            state: directory
+            mode: '0755'
+
+        - name: Download rockyou.txt wordlist
+          get_url:
+            url: https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+            dest: /usr/share/wordlists/rockyou.txt
+            mode: '0644'
+
+    # ============================================================
+    # Claude Code Agents
+    # ============================================================
+    - name: Install Claude Code agents
+      when: install_claude_agents | bool
+      tags: agents
+      block:
+        - name: Set agents directory (global)
+          set_fact:
+            agents_target_dir: "{{ ansible_env.HOME }}/.claude/agents"
+          when: claude_agents_scope == "global"
+
+        - name: Set agents directory (local)
+          set_fact:
+            agents_target_dir: "{{ playbook_dir }}/../.claude/agents"
+          when: claude_agents_scope == "local"
+
+        - name: Create Claude agents directory
+          file:
+            path: "{{ agents_target_dir }}"
+            state: directory
+            mode: '0755'
+            owner: "{{ claude_agents_user }}"
+          become: false
+
+        - name: Copy agent definition files
+          copy:
+            src: "{{ playbook_dir }}/../agents/"
+            dest: "{{ agents_target_dir }}/"
+            mode: '0644'
+            owner: "{{ claude_agents_user }}"
+          become: false
+
+  handlers:
+    - name: Reload shell
+      debug:
+        msg: "Please reload your shell or run 'source ~/.bashrc' to update PATH"

@@ -1,0 +1,27 @@
+# Report rendering - Claude working directory
+
+# List available targets
+list:
+    @just --list
+
+# Default recipe
+default: report
+
+# Render REFERENCES.qmd to PDF
+references:
+    quarto render REFERENCES.qmd --to pdf
+
+# Render REPORT.qmd to PDF and open
+report: references
+    quarto render REPORT.qmd --to pdf
+    xdg-open REPORT.pdf
+
+# Render all documents
+all: references
+    quarto render REPORT.qmd --to pdf
+    quarto render REFERENCES.qmd --to pdf
+
+# Clean generated files
+clean:
+    rm -f *.pdf *.html
+    rm -rf *_files

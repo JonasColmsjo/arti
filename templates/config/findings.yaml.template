@@ -1,0 +1,39 @@
+# Investigation findings with metadata
+# This file documents what was discovered during analysis
+# Use neutral language (findings, not IOCs)
+
+ips:
+  # Example format:
+  # - value: 192.168.1.100
+  #   level: l1
+  #   status: suspicious  # suspicious, malicious, benign, compromised
+  #   note: Description of why this IP is interesting
+  #   source: Where you found this (pcap analysis, memory dump, etc)
+  #   added: '2024-01-01'
+
+domains:
+  # Example format:
+  # - value: evil-domain.com
+  #   level: l1
+  #   status: malicious
+  #   note: Registered recently, used for C2
+  #   source: DNS extraction
+  #   added: '2024-01-01'
+
+processes:
+  # Example format:
+  # - value: suspicious.exe
+  #   level: l1
+  #   status: malicious
+  #   note: Executed during attack timeframe
+  #   source: prefetch analysis
+  #   added: '2024-01-01'
+
+accounts:
+  # Example format:
+  # - value: admin_user
+  #   level: l1
+  #   status: compromised
+  #   note: Account used for lateral movement
+  #   source: DC logs
+  #   added: '2024-01-01'

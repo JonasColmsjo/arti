@@ -1,0 +1,49 @@
+# Artifact file paths per tier
+# All paths are relative to $ARTIFACTS_PATH/artifacts-unpacked/
+
+t1:
+  # Tier 1 artifacts
+  network:
+    core_pcap: ""           # Main internal network capture
+    dns_pcap: ""            # DNS traffic capture
+    egress_pcap: ""         # Egress/perimeter capture
+    firewall_logs: ""       # Firewall log exports
+  disk:
+    host1:
+      plaso: ""             # Plaso timeline CSV
+      triage: ""            # KAPE/triage archive (VHDX/ZIP)
+    host2:
+      plaso: ""
+      triage: ""
+  memory:
+    host1: ""               # Memory dump (raw/lime)
+
+t2:
+  # Tier 2 artifacts
+  network: {}
+  disk: {}
+  memory: {}
+
+t3:
+  # Tier 3 artifacts
+  network: {}
+  disk: {}
+  memory: {}
+
+# Work output paths (relative to project root, auto-created)
+work_paths:
+  t1:
+    network_extractions: work/tier1/automated/network/extractions
+    disk_extractions: work/tier1/automated/disk/extractions
+    memory_extractions: work/tier1/automated/memory/extractions
+    timelines: work/tier1/timelines
+  t2:
+    network_extractions: work/tier2/automated/network/extractions
+    disk_extractions: work/tier2/automated/disk/extractions
+    memory_extractions: work/tier2/automated/memory/extractions
+    timelines: work/tier2/timelines
+  t3:
+    network_extractions: work/tier3/automated/network/extractions
+    disk_extractions: work/tier3/automated/disk/extractions
+    memory_extractions: work/tier3/automated/memory/extractions
+    timelines: work/tier3/timelines

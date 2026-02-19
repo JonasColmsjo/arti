@@ -1,0 +1,22 @@
+# Forensic Investigation Project Environment
+# Used by direnv to automatically set environment variables
+
+# Project root directory (this directory)
+export PROJECT_ROOT=$(pwd)
+
+# Path to artifacts (evidence files)
+# Update this to point to your artifacts location
+export ARTIFACTS_PATH=/path/to/artifacts
+
+# Path to gizur-arti framework (shared forensic tools)
+# Adjust if gizur-arti is in a different location
+export ARTI_PATH="${ARTI_PATH:-$HOME/repos/gizur-arti}"
+
+# Add gizur-arti scripts to PYTHONPATH and PATH
+export PYTHONPATH="$ARTI_PATH/scripts:$PYTHONPATH"
+export PATH="$ARTI_PATH/scripts:$PATH"
+
+# Optional: Volatility 3 environment
+# Uncomment and adjust if you have Volatility 3 installed
+# export VOL3_PATH="$HOME/tools/volatility3"
+# export PATH="$VOL3_PATH:$PATH"

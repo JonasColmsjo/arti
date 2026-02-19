@@ -1,0 +1,95 @@
+# Analysis settings and configuration
+
+# Attack timeframes per tier
+# Set start/end dates for each artifact tier
+timeframe:
+  t1:
+    start: null
+    end: null
+    note: Tier 1 attack window
+  t2:
+    start: null
+    end: null
+    note: Tier 2 attack window
+  t3:
+    start: null
+    end: null
+    note: Tier 3 attack window
+
+# Analysis thresholds (used by automated analysis)
+thresholds:
+  low_frequency_domains: 10        # DNS queries below this count flagged as interesting
+  beacon_interval_min_sec: 30      # Minimum beacon interval to detect
+  beacon_interval_max_sec: 120     # Maximum beacon interval to detect
+  high_volume_bytes: 10000000      # Connections above 10MB flagged
+  high_connection_count: 1000      # IPs with >1000 connections flagged
+
+# Domains to exclude from analysis (known benign infrastructure)
+# Add CDNs, analytics, advertising that creates noise
+exclude_domains:
+  # Microsoft infrastructure
+  - microsoft.com
+  - windows.com
+  - msedge.net
+  - bing.com
+  - live.com
+  - office.com
+  - office365.com
+  - oneclient.sfx.ms
+  # Google
+  - google.com
+  - googleapis.com
+  - gstatic.com
+  - youtube.com
+  # Amazon
+  - amazonaws.com
+  - amazon.com
+  - cloudfront.net
+  # Cloudflare
+  - cloudflare.com
+  - cdnjs.cloudflare.com
+  # Common CDNs
+  - akamaized.net
+  - akamai.net
+  - cdn.jsdelivr.net
+  - fastly.net
+  # Add more as needed during analysis...
+
+# Port to protocol mappings (used by flow analysis)
+port_mappings:
+  # Standard ports
+  21: FTP
+  22: SSH
+  23: TELNET
+  25: SMTP
+  53: DNS
+  80: HTTP
+  110: POP3
+  123: NTP
+  135: RPC
+  139: NETBIOS
+  143: IMAP
+  161: SNMP
+  443: HTTPS
+  445: SMB
+  465: SMTPS
+  587: SMTP-ALT
+  993: IMAPS
+  995: POP3S
+  1194: OPENVPN
+  1433: MSSQL
+  1521: ORACLE
+  3306: MYSQL
+  3389: RDP
+  5432: POSTGRES
+  5900: VNC
+  5985: WINRM
+  8080: HTTP-ALT
+  8443: HTTPS-ALT
+  # ICS/OT protocols
+  44818: ENIP-CIP
+  502: MODBUS
+  102: S7COMM
+  2222: ENIP-CIP-ALT
+  1962: PCCC
+  41100: AB-DATA

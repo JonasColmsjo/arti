@@ -1,0 +1,15 @@
+t1:
+  network:
+    pcap: Tier_1_Artifacts/spader.pcap
+  disk:
+    stsupport10:
+      plaso: Tier_1_Artifacts/stsupport10.plaso
+t2:
+  network:
+    capture1: Tier_2_Artifacts/capture1.pcap
+    capture2: Tier_2_Artifacts/capture2.pcap
+  disk:
+    ews_vm: Tier_2_Artifacts/ews-vm-kape
+t3:
+  network:
+    adversary: Tier_3_Artifacts/adversary.pcap

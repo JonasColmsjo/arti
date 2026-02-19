@@ -1,0 +1,15 @@
+---
+# Security Tools - Workstation Configuration
+#
+# Configuration for security analyst workstations
+#
+
+# Standard workstation setup - core tools only
+install_core: true
+install_python: true
+install_go: true
+install_reverse_engineering: true
+install_forensics: false
+install_wireless: false
+install_offensive: false
+install_claude_agents: true

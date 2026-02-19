@@ -1,0 +1,57 @@
+---
+# Security Tools - Global Variables
+#
+# These variables apply to all hosts
+#
+
+# ============================================================
+# Tool Installation Toggles
+# ============================================================
+
+# Core tools: nmap, tcpdump, netcat, etc.
+install_core: true
+
+# Python tools: bandit, semgrep, shodan, pwntools, scapy
+install_python: true
+
+# Go tools: nuclei
+install_go: true
+
+# Reverse engineering: radare2, binwalk, gdb, frida, ghidra
+install_reverse_engineering: false
+
+# Forensics: volatility, sleuthkit, autopsy
+install_forensics: false
+
+# Wireless: aircrack-ng, reaver, mdk4
+install_wireless: false
+
+# Offensive: hashcat, hydra, john, sqlmap, gobuster
+install_offensive: false
+
+# Claude Code agent definitions
+install_claude_agents: true
+
+# ============================================================
+# Claude Code Configuration
+# ============================================================
+
+# Where to install agents: "global" (~/.claude/agents) or "local" (.claude/agents)
+claude_agents_scope: global
+
+# ============================================================
+# API Keys (set via environment or vault)
+# ============================================================
+
+# Shodan API key (optional)
+# shodan_api_key: "{{ lookup('env', 'SHODAN_API_KEY') }}"
+
+# ============================================================
+# Tool-specific Configuration
+# ============================================================
+
+# Nuclei templates update on install
+nuclei_update_templates: true
+
+# Python packages install method: system, user, or venv
+python_install_method: user

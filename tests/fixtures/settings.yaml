@@ -1,0 +1,34 @@
+tiers:
+  t1:
+    artifacts_folder: Tier_1_Artifacts
+    work_folder: tier1
+    display_name: Tier 1
+    description: Spader + Stark
+  t2:
+    artifacts_folder: Tier_2_Artifacts
+    work_folder: tier2
+    display_name: Tier 2
+    description: Network captures + EWS-VM
+  t3:
+    artifacts_folder: Tier_3_Artifacts
+    work_folder: tier3
+    display_name: Tier 3
+    description: Adversary captures
+
+thresholds:
+  min_bytes: 1024
+  max_connections: 1000
+  beacon_score: 3
+
+timeframe:
+  t1:
+    start: "2020-11-05"
+    end: "2020-11-07"
+  t2:
+    start: "2020-08-17"
+    end: "2020-08-18"
+
+exclude_domains:
+  - microsoft.com
+  - windowsupdate.com
+  - google.com

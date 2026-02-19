@@ -1,0 +1,94 @@
+# Claude Report - AI Assistant Instructions
+
+## Directory Purpose
+
+This directory contains the AI-editable working draft of the forensic report and supporting materials.
+
+## Justfile Commands
+
+```bash
+just              # Default: render report
+just list         # List all targets
+just report       # Render REPORT.qmd to PDF and open
+just references   # Render REFERENCES.qmd to PDF
+just all          # Render all documents
+just clean        # Remove generated files
+```
+
+## Auto-Render After Changes
+
+**IMPORTANT**: Always render the PDF after making changes to any `.qmd` file.
+Use `just report` after editing `REPORT.qmd`, `just references` after editing `REFERENCES.qmd`, etc.
+This ensures the user can immediately see the rendered result.
+
+## Writing Style
+
+**Language Requirements:**
+- Formal but simple and straightforward language
+- Assume the audience is NOT technical (judges, lawyers, managers)
+- Evidence handling must be documented so findings are admissible in court
+- Avoid jargon; when technical terms are necessary, define them
+- Use active voice where possible
+- Be precise and unambiguous
+
+**Factual Reporting (CRITICAL):**
+- Present facts and observations, NOT interpretations or conclusions
+- Do not label files as "malware", "trojanized", or "malicious" unless confirmed by dynamic analysis or vendor classification
+- Use neutral, observable language: "anomalous", "modified", "swollen", "high-entropy"
+- Example: say "the binary differs from the clean version in 36.5% of bytes" NOT "the trojanized binary"
+- Example: say "the file contains 99.7% null bytes" NOT "the file uses SwollenFile evasion technique"
+- Interpretations are only acceptable when explicitly labeled as hypotheses
+- When in doubt, describe what was observed and let the reader draw conclusions
+
+**Formatting (APA-inspired):**
+- Avoid bold inline headings like "**Strengths:**" followed by bullet points
+- Use flowing prose paragraphs instead of converting lists to text
+- When listing items, integrate them into sentences naturally
+- Reserve headings for actual section breaks, not inline labels
+- Bullet points are acceptable for truly list-like content (e.g., commands, options)
+
+**DICTIONARY.qmd:**
+- Maintain `DICTIONARY.qmd` with all technical terms and abbreviations used
+- Update the dictionary whenever new technical terms are introduced
+- This glossary supports non-technical readers and court admissibility
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `REPORT.qmd` | Main forensic report |
+| `DICTIONARY.qmd` | Glossary for non-technical readers |
+| `REFERENCES.qmd` | Bibliography and references |
+| `references.bib` | BibTeX bibliography database |
+| `justfile` | Build automation recipes |
+
+## Tables and Figures
+
+**IMPORTANT**: Always use captions for tables and figures:
+- Tables: Add caption below with `{#tbl-label}` syntax: `: Caption text. {#tbl-label}`
+- Figures: Add caption with `{#fig-label}` syntax: `![Caption](path){#fig-label}`
+- Reference in text using `@tbl-label` or `@fig-label`
+
+## Figures
+
+To include in Quarto:
+```markdown
+![Caption](figures/filename.png){#fig-label width="80%"}
+```
+
+## References
+
+Use BibTeX for all references. Cite with `@key` syntax in text.
+
+## Commit Often
+
+**IMPORTANT**: Commit changes frequently throughout report writing:
+- After adding new sections
+- After updating figures
+- After completing drafts
+- Before and after major edits
+
+## Dependencies
+
+- Quarto
+- LuaLaTeX (for PDF rendering)

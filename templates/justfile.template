@@ -1,0 +1,139 @@
+# PROJECT_NAME - Forensic Analysis Commands
+# Generic forensic targets imported from gizur-arti
+
+set allow-duplicate-recipes
+set allow-duplicate-variables
+
+import? '~/repos/gizur-arti/justfile'
+
+# Setup environment for all bash scripts
+export PATH := "/home/me/repos/gizur-arti/scripts:/home/me/repos/gizur-arti/.venv/bin:" + env_var('PATH')
+
+# Default: list available recipes
+default:
+    @just --list
+
+# Use mdcat for markdown if available, otherwise cat
+md := if `which mdcat 2>/dev/null || echo ""` != "" { "mdcat" } else { "cat" }
+
+# =============================================================================
+# Project-Specific Commands
+# =============================================================================
+# Add project-specific targets below. Generic forensic targets (memory-*,
+# network-*, kape-*, viz-*, project-ioc-*, project-hash-*, disk-extract-raw,
+# file-analyze-binary, file-compare-binary) are inherited from gizur-arti.
+#
+# Targets that typically need project-specific versions:
+#   - network-index (artifact paths differ per project)
+#   - network-flows-ascii (project-specific CSV paths)
+#   - network-files-extract (project-specific artifact paths)
+#   - project-log-grep (project-specific log locations)
+#   - disk-status-raw (project-specific extraction paths)
+#   - Attack timelines and project findings
+
+# =============================================================================
+# Example: PCAP Indexing (customize artifact paths)
+# =============================================================================
+
+# Index all PCAPs into unified SQLite database
+# Usage: just network-index t1|t2|t3
+# network-index tier="t2":
+#     #!/usr/bin/env bash
+#     set -e
+#     case "{{tier}}" in
+#         t1) lvl=1; dbdir="work/tier1" ;;
+#         t2) lvl=2; dbdir="work/tier2" ;;
+#         t3) lvl=3; dbdir="work/tier3" ;;
+#         *)  echo "Unknown tier: {{tier}} (use t1, t2, or t3)"; exit 1 ;;
+#     esac
+#     DB="$dbdir/automated/network/packets.db"
+#     mkdir -p "$(dirname "$DB")"
+#     rm -f "$DB"
+#     ARTIFACTS="${ARTIFACTS_PATH}/artifacts"
+#     echo "Indexing PCAPs into $DB..."
+#     for pcap in "$ARTIFACTS"/Tier_${lvl}_Artifacts/*.pcap; do
+#         [[ -f "$pcap" ]] && pcap_index.py index "$pcap" --db "$DB" --tier "{{tier}}"
+#     done
+#     echo "Done. Database: $DB"
+#     pcap_index.py stats "$DB"
+
+# =============================================================================
+# Example: Project Log Search (customize per artifact structure)
+# =============================================================================
+
+# Grep across all logs and extracted text files: just project-log-grep t1|t2 <pattern>
+# project-log-grep tier pattern:
+#     #!/usr/bin/env bash
+#     case "{{tier}}" in
+#         t1)
+#             echo "=== Disk Extractions ==="
+#             find work/tier1/automated/disk/extractions -type f \( -name "*.txt" -o -name "*.log" -o -name "*.csv" \) -exec grep -l -i "{{pattern}}" {} \; 2>/dev/null | while read f; do
+#                 echo "--- $f ---"
+#                 grep -i "{{pattern}}" "$f" | head -10
+#             done
+#             echo ""
+#             echo "=== Network CSVs ==="
+#             grep -i "{{pattern}}" work/tier1/automated/network/extractions/*.csv 2>/dev/null | head -20 || echo "(no matches)"
+#             ;;
+#         *)  echo "Unknown tier: {{tier}}"; exit 1 ;;
+#     esac
+
+# =============================================================================
+# Example: Project Findings
+# =============================================================================
+
+# List FINDINGS.md files for a tier: just project-findings-list t1
+project-findings-list tier:
+    #!/usr/bin/env bash
+    case "{{tier}}" in t1) dir="work/tier1" ;; t2) dir="work/tier2" ;; t3) dir="work/tier3" ;; *) echo "Unknown tier: {{tier}}"; exit 1 ;; esac
+    find "$dir" -name '*FINDING*' -name '*.md' | sort
+
+# Summarize all findings for a tier: just project-findings-summarize t2
+project-findings-summarize tier:
+    #!/usr/bin/env bash
+    case "{{tier}}" in t1) dir="work/tier1" ;; t2) dir="work/tier2" ;; t3) dir="work/tier3" ;; *) echo "Unknown tier: {{tier}}"; exit 1 ;; esac
+    files=$(find "$dir" -name '*FINDING*' -name '*.md' ! -path '*/archive/*' | sort)
+    if [ -z "$files" ]; then echo "No findings files found for {{tier}}"; exit 1; fi
+    content=""
+    for f in $files; do
+        content+=$'\n=== FILE: '"$f"$' ===\n'
+        content+="$(cat "$f")"
+    done
+    prompt='You are a digital forensics analyst. Summarize the investigation findings below into a concise briefing.
+    For each findings file, output:
+    - **File**: the filename
+    - **Key findings**: 2-3 bullet points of the most important discoveries
+    - **IOCs**: any IPs, domains, hashes, filenames mentioned
+    - **Severity**: CRITICAL / HIGH / MEDIUM / LOW
+
+    End with an OVERALL SUMMARY section that ties the findings together into a coherent attack narrative.
+    Be factual - no speculation. Reference specific artifacts (frame numbers, timestamps, file paths) where available.'
+    echo "$content" | claude -p --model haiku "$prompt"
+
+# =============================================================================
+# Example: Disk Extraction Status (customize paths)
+# =============================================================================
+
+# Show extraction status: just disk-status-raw t1|t2
+# disk-status-raw tier="t1":
+#     #!/usr/bin/env bash
+#     case "{{tier}}" in
+#         t1) EXTRACT="work/tier1/automated/disk/extractions/HOSTNAME" ;;
+#         t2) EXTRACT="work/tier2/automated/disk/extractions/HOSTNAME" ;;
+#         *)  echo "Unknown tier: {{tier}}"; exit 1 ;;
+#     esac
+#     echo "=== Raw Disk Extraction Status ({{tier}}) ==="
+#     echo "Path: $EXTRACT"
+#     if [[ ! -d "$EXTRACT" ]]; then
+#         echo "Not extracted yet. Run: just disk-extract-raw <partition> $EXTRACT"
+#         exit 0
+#     fi
+#     echo "Directories:"
+#     for dir in Registry ProgramExecution EventLogs FileFolderAccess; do
+#         if [[ -d "$EXTRACT/$dir" ]]; then
+#             count=$(find "$EXTRACT/$dir" -type f 2>/dev/null | wc -l)
+#             echo "  ✓ $dir ($count files)"
+#         else
+#             echo "  ✗ $dir"
+#         fi
+#     done
