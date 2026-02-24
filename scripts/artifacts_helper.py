@@ -48,7 +48,7 @@ def cmd_config(tier=None, module=None):
     artifacts_base = artifacts_path / 'artifacts-unpacked'
     data = load_artifacts()
     settings = load_settings()
-    tiers = settings.get('tiers', {})
+    tiers = settings.get('tiers', settings.get('levels', {}))
     timeframes = settings.get('timeframe', {})
 
     print(f"PROJECT_ROOT:   {project_root}")
@@ -217,11 +217,11 @@ def main():
 
     cmd = sys.argv[1]
     if cmd == 'config':
-        # Parse optional tier (tN) and module args in any order
+        # Parse optional tier (tN/lN) and module args in any order
         tier = None
         module = None
         for arg in sys.argv[2:]:
-            if arg.startswith('t') and arg[1:].isdigit():
+            if len(arg) >= 2 and arg[0] in ('t', 'l') and arg[1:].isdigit():
                 tier = arg
             else:
                 module = arg

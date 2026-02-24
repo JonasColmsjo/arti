@@ -50,9 +50,24 @@ artifacts/
 - Tier 3: All tiers
 
 ### Investigation Log
-**MANDATORY**: Update `INVESTIGATION-LOG.md` after EVERY significant action.
-- **APPEND-ONLY**: Never modify existing entries
-- Log in real-time, not batched
+**MANDATORY**: Update the investigation log after EVERY significant action.
+- Logs live in `investigation-log/` directory (one file per day: `YYYY-MM-DD.md`)
+- Use `just inv-log add "Title"` and pipe the entry body via stdin
+- **APPEND-ONLY**: Previous days' files are automatically locked (chmod 400). Never modify locked files.
+- If a previous entry contains an error, add a correction entry today referencing the original.
+- Log in real-time, not batched.
+
+**For Claude Code**: After each significant analysis step, add a log entry:
+```
+investigation-log.sh add "Entry Title" <<'ENTRY'
+**Action**: What was done
+**Evidence**: Which artifacts were examined
+**Key Finding**: Summary of discoveries (if any)
+**Output**: Files created or modified
+ENTRY
+```
+
+**Migration**: For projects with an existing `INVESTIGATION-LOG.md`, run `just inv-log migrate` to split into daily files.
 
 ### CSV Standards
 - **REQUIRED**: Every CSV must have `timestamp_utc` or `datetime_utc` column

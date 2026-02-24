@@ -10,6 +10,12 @@ md := if `which mdcat 2>/dev/null || echo ""` != "" { "mdcat" } else { "cat" }
 # Arti root directory
 arti_dir := justfile_directory()
 
+# Configurable tier defaults — override these in consuming project justfiles
+default_net_tier := "t2"
+default_mem_tier := "t1"
+tier_pattern := '^[tl][0-9]+$'
+work_dir_prefix := "tier"
+
 # List available targets
 default:
     @just --list
@@ -38,16 +44,16 @@ add-module name:
 # Project Status
 # =============================================================================
 
-# Show project config: just config [t1|t2|t3] [network|disk|memory|docs]
+# Show project config: just config [tier] [network|disk|memory|docs]
 config *args:
     artifacts_helper.py config {{args}}
 
 # Show analysis status: just project-status [module] [tier]
-project-status module="network" tier="t2":
+project-status module="network" tier=default_net_tier:
     forensic_analysis.py {{module}} status --tier {{tier}}
 
 # Reset analysis status: just project-reset [module] [tier]
-project-reset module="network" tier="t2":
+project-reset module="network" tier=default_net_tier:
     forensic_analysis.py {{module}} reset --tier {{tier}}
 
 # =============================================================================
@@ -55,33 +61,33 @@ project-reset module="network" tier="t2":
 # =============================================================================
 
 # Extract all network data (packets, flows, DNS, TLS, etc.): just network-extract-all [tier]
-network-extract-all tier="t2":
+network-extract-all tier=default_net_tier:
     forensic_analysis.py network extract all --tier {{tier}}
 
 # Extract all disk data: just disk-extract [tier]
-disk-extract tier="t2":
+disk-extract tier=default_net_tier:
     forensic_analysis.py disk extract all --tier {{tier}}
 
 # Extract flows to CSV: just network-flows extract [tier]
-network-flows-extract tier="t2":
+network-flows-extract tier=default_net_tier:
     forensic_analysis.py network extract flows --tier {{tier}} --force
 
 # Extract per-packet CSV with MACs from all PCAPs: just network-extract-packets [tier]
-network-extract-packets tier="t2":
+network-extract-packets tier=default_net_tier:
     forensic_analysis.py network extract packets --tier {{tier}} --force
 
 # Extract DNS queries (T2 unified format, T1 already extracted): just network-dns-extract [tier]
-network-dns-extract tier="t2":
+network-dns-extract tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "DNS extraction not needed for T1 - data already extracted."
             echo "T1 DNS files (raw tshark format):"
-            echo "  - dns-queries.csv: work/tier1/automated/network/extractions/dns-queries.csv"
+            echo "  - dns-queries.csv: work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv"
             echo ""
-            head -5 work/tier1/automated/network/extractions/dns-queries.csv
+            head -5 work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv
             exit 0
             ;;
         *)
@@ -90,19 +96,19 @@ network-dns-extract tier="t2":
     esac
 
 # Extract TLS fingerprints (T2 unified format, T1 already extracted): just network-tls-extract [tier]
-network-tls-extract tier="t2":
+network-tls-extract tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "TLS extraction not needed for T1 - data already extracted."
             echo "T1 TLS files (raw tshark format):"
-            echo "  - core-tls.csv: work/tier1/automated/network/extractions/core-tls.csv"
-            echo "  - egress-tls.csv: work/tier1/automated/network/extractions/egress-tls.csv"
-            echo "  - egress-ja3.csv: work/tier1/automated/network/extractions/egress-ja3.csv"
+            echo "  - core-tls.csv: work/{{work_dir_prefix}}1/automated/network/extractions/core-tls.csv"
+            echo "  - egress-tls.csv: work/{{work_dir_prefix}}1/automated/network/extractions/egress-tls.csv"
+            echo "  - egress-ja3.csv: work/{{work_dir_prefix}}1/automated/network/extractions/egress-ja3.csv"
             echo ""
-            head -5 work/tier1/automated/network/extractions/core-tls.csv
+            head -5 work/{{work_dir_prefix}}1/automated/network/extractions/core-tls.csv
             exit 0
             ;;
         *)
@@ -115,76 +121,76 @@ network-tls-extract tier="t2":
 # =============================================================================
 
 # Extract all memory data (volatility plugins): just memory-extract [tier]
-memory-extract tier="t1":
+memory-extract tier=default_mem_tier:
     forensic_analysis.py memory extract all --tier {{tier}}
 
 # Run all memory analyses: just memory-analyze [tier]
-memory-analyze tier="t1":
+memory-analyze tier=default_mem_tier:
     forensic_analysis.py memory analyze all --tier {{tier}} --show
 
 # Show memory analysis status: just memory-status [tier]
-memory-status tier="t1":
+memory-status tier=default_mem_tier:
     forensic_analysis.py memory status --tier {{tier}}
 
 # Extract pslist: just memory-pslist [tier]
-memory-pslist tier="t1":
+memory-pslist tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract pslist --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-pslist.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract pstree: just memory-pstree [tier]
-memory-pstree tier="t1":
+memory-pstree tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract pstree --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-pstree.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract netscan: just memory-netscan [tier]
-memory-netscan tier="t1":
+memory-netscan tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract netscan --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-netscan.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract malfind: just memory-malfind [tier]
-memory-malfind tier="t1":
+memory-malfind tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract malfind --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-malfind.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract cmdline: just memory-cmdline [tier]
-memory-cmdline tier="t1":
+memory-cmdline tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract cmdline --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-cmdline.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract dlllist: just memory-dlllist [tier]
-memory-dlllist tier="t1":
+memory-dlllist tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract dlllist --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-dlllist.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract handles: just memory-handles [tier]
-memory-handles tier="t1":
+memory-handles tier=default_mem_tier:
     forensic_analysis.py memory extract handles --tier {{tier}} --force
 
 # Extract svcscan: just memory-svcscan [tier]
-memory-svcscan tier="t1":
+memory-svcscan tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     forensic_analysis.py memory extract svcscan --tier {{tier}} --force
     cat "$dir"/automated/memory/extractions/*-svcscan.txt 2>/dev/null || echo "Run memory-extract first"
 
 # Extract credentials from memory: just memory-credentials [tier]
 # Runs hashdump, lsadump, cachedump, and SAM account flags (printkey)
-memory-credentials tier="t1":
+memory-credentials tier=default_mem_tier:
     #!/usr/bin/env bash
     VOL="${VOL3_PATH:-$HOME/micromamba-volatility3/bin/vol}"
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     outdir="$dir/automated/memory/extractions"
     mkdir -p "$outdir"
     # Find memory dump via artifacts_helper
@@ -214,43 +220,43 @@ memory-credentials tier="t1":
     echo "Results saved to $outdir/"
 
 # Analyze processes: just memory-analyze-processes [tier]
-memory-analyze-processes tier="t1":
+memory-analyze-processes tier=default_mem_tier:
     forensic_analysis.py memory analyze process_analysis --tier {{tier}} --force --show
 
 # Analyze network connections: just memory-analyze-network [tier]
-memory-analyze-network tier="t1":
+memory-analyze-network tier=default_mem_tier:
     forensic_analysis.py memory analyze network_analysis --tier {{tier}} --force --show
 
 # Analyze code injection: just memory-analyze-injection [tier]
-memory-analyze-injection tier="t1":
+memory-analyze-injection tier=default_mem_tier:
     forensic_analysis.py memory analyze injection_analysis --tier {{tier}} --force --show
 
 # Analyze execution artifacts: just memory-analyze-execution [tier]
-memory-analyze-execution tier="t1":
+memory-analyze-execution tier=default_mem_tier:
     forensic_analysis.py memory analyze execution_analysis --tier {{tier}} --force --show
 
 # View process analysis report: just memory-report-processes [tier]
-memory-report-processes tier="t1":
+memory-report-processes tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     {{md}} "$dir"/automated/memory/analysis/process-analysis.md
 
 # View network connections report: just memory-report-network [tier]
-memory-report-network tier="t1":
+memory-report-network tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     {{md}} "$dir"/automated/memory/analysis/network-connections.md
 
 # View injection analysis report: just memory-report-injection [tier]
-memory-report-injection tier="t1":
+memory-report-injection tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     {{md}} "$dir"/automated/memory/analysis/injection-analysis.md
 
 # View malware extraction report: just memory-report-malware [tier]
-memory-report-malware tier="t1":
+memory-report-malware tier=default_mem_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }; dir="work/{{work_dir_prefix}}${tier#?}"
     {{md}} "$dir"/automated/memory/analysis/MALWARE-EXTRACTION-SUMMARY.md
 
 # =============================================================================
@@ -263,7 +269,7 @@ network-flows *args:
     set -eo pipefail
     all=({{args}})
     cmd="${all[0]:-help}"
-    tier="${all[1]:-t2}"
+    tier="${all[1]:-{{default_net_tier}}}"
     case "$cmd" in
         extract)
             forensic_analysis.py network extract flows --tier "$tier" --force
@@ -345,7 +351,7 @@ network-flows *args:
             echo "  extract     [tier]                 Extract flows to CSV"
             echo "  ascii       [tier] [labels.yaml]   Interactive flow visualization"
             echo ""
-            echo "Default tier: t2"
+            echo "Default tier: {{default_net_tier}}"
             exit 1
             ;;
     esac
@@ -355,18 +361,18 @@ network-flows *args:
 # =============================================================================
 
 # Show DNS query summary (T2 unified, T1 uses grep): just network-dns-summary [tier]
-network-dns-summary tier="t2":
+network-dns-summary tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "DNS summary not available for T1 (different CSV format)."
-            echo "T1 DNS queries: work/tier1/automated/network/extractions/dns-queries.csv"
+            echo "T1 DNS queries: work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv"
             echo ""
             echo "Quick stats:"
-            wc -l work/tier1/automated/network/extractions/dns-queries.csv | awk '{print "  Total queries: " $1-1}'
-            cut -d',' -f4 work/tier1/automated/network/extractions/dns-queries.csv | sort | uniq -c | sort -rn | head -10 | awk '{print "  " $1 " - " $2}'
+            wc -l work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv | awk '{print "  Total queries: " $1-1}'
+            cut -d',' -f4 work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv | sort | uniq -c | sort -rn | head -10 | awk '{print "  " $1 " - " $2}'
             exit 0
             ;;
         *)
@@ -378,21 +384,21 @@ network-dns-summary tier="t2":
 network-dns-ip tier ip:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1) grep "{{ip}}" work/tier1/automated/network/extractions/dns-queries.csv ;;
+        t1|l1) grep "{{ip}}" work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv ;;
         *) query_dns.py ip {{ip}} --tier "$tier" ;;
     esac
 
 # Show NXDOMAIN responses (DGA detection): just network-dns-nxdomain [tier]
-network-dns-nxdomain tier="t2":
+network-dns-nxdomain tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "NXDOMAIN query not available for T1 (different CSV format)."
-            echo "Search manually: grep NXDOMAIN work/tier1/automated/network/extractions/dns-queries.csv"
+            echo "Search manually: grep NXDOMAIN work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv"
             ;;
         *) query_dns.py nxdomain --tier "$tier" ;;
     esac
@@ -401,21 +407,21 @@ network-dns-nxdomain tier="t2":
 network-dns-domain tier pattern:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1) grep -i "{{pattern}}" work/tier1/automated/network/extractions/dns-queries.csv | head -50 ;;
+        t1|l1) grep -i "{{pattern}}" work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv | head -50 ;;
         *) query_dns.py domain {{pattern}} --tier "$tier" ;;
     esac
 
 # Show external DNS queries: just network-dns-external [tier]
-network-dns-external tier="t2":
+network-dns-external tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "External DNS query not available for T1 (different CSV format)."
-            echo "T1 DNS file: work/tier1/automated/network/extractions/dns-queries.csv"
+            echo "T1 DNS file: work/{{work_dir_prefix}}1/automated/network/extractions/dns-queries.csv"
             ;;
         *) query_dns.py external --tier "$tier" ;;
     esac
@@ -425,22 +431,22 @@ network-dns-external tier="t2":
 # =============================================================================
 
 # Show TLS/JA3 summary (T2 unified, T1 uses raw CSVs): just network-tls-summary [tier]
-network-tls-summary tier="t2":
+network-tls-summary tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "TLS summary not available for T1 (different CSV format)."
             echo "T1 TLS files:"
-            echo "  - core-tls.csv: work/tier1/automated/network/extractions/core-tls.csv"
-            echo "  - egress-tls.csv: work/tier1/automated/network/extractions/egress-tls.csv"
-            echo "  - egress-ja3.csv: work/tier1/automated/network/extractions/egress-ja3.csv"
+            echo "  - core-tls.csv: work/{{work_dir_prefix}}1/automated/network/extractions/core-tls.csv"
+            echo "  - egress-tls.csv: work/{{work_dir_prefix}}1/automated/network/extractions/egress-tls.csv"
+            echo "  - egress-ja3.csv: work/{{work_dir_prefix}}1/automated/network/extractions/egress-ja3.csv"
             echo ""
             echo "Quick stats:"
-            wc -l work/tier1/automated/network/extractions/core-tls.csv | awk '{print "  Core TLS: " $1-1 " connections"}'
-            wc -l work/tier1/automated/network/extractions/egress-tls.csv | awk '{print "  Egress TLS: " $1-1 " connections"}'
-            wc -l work/tier1/automated/network/extractions/egress-ja3.csv | awk '{print "  Egress JA3: " $1-1 " fingerprints"}'
+            wc -l work/{{work_dir_prefix}}1/automated/network/extractions/core-tls.csv | awk '{print "  Core TLS: " $1-1 " connections"}'
+            wc -l work/{{work_dir_prefix}}1/automated/network/extractions/egress-tls.csv | awk '{print "  Egress TLS: " $1-1 " connections"}'
+            wc -l work/{{work_dir_prefix}}1/automated/network/extractions/egress-ja3.csv | awk '{print "  Egress JA3: " $1-1 " fingerprints"}'
             exit 0
             ;;
         *)
@@ -452,25 +458,25 @@ network-tls-summary tier="t2":
 network-tls-ip tier ip:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "=== Core TLS ==="
-            grep "{{ip}}" work/tier1/automated/network/extractions/core-tls.csv | head -20
+            grep "{{ip}}" work/{{work_dir_prefix}}1/automated/network/extractions/core-tls.csv | head -20
             echo ""
             echo "=== Egress TLS ==="
-            grep "{{ip}}" work/tier1/automated/network/extractions/egress-tls.csv | head -20
+            grep "{{ip}}" work/{{work_dir_prefix}}1/automated/network/extractions/egress-tls.csv | head -20
             ;;
         *) query_tls.py ip {{ip}} --tier "$tier" ;;
     esac
 
 # List all SNI values: just network-tls-sni [tier]
-network-tls-sni tier="t2":
+network-tls-sni tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "SNI list not available for T1 (different CSV format)."
             echo "Search for SNI in TLS files manually."
             ;;
@@ -481,21 +487,21 @@ network-tls-sni tier="t2":
 network-tls-ja3 tier hash:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1) grep "{{hash}}" work/tier1/automated/network/extractions/egress-ja3.csv ;;
+        t1|l1) grep "{{hash}}" work/{{work_dir_prefix}}1/automated/network/extractions/egress-ja3.csv ;;
         *) query_tls.py ja3 {{hash}} --tier "$tier" ;;
     esac
 
 # Show external TLS connections: just network-tls-external [tier]
-network-tls-external tier="t2":
+network-tls-external tier=default_net_tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "External TLS query not available for T1 (different CSV format)."
-            echo "T1 TLS files: work/tier1/automated/network/extractions/egress-tls.csv"
+            echo "T1 TLS files: work/{{work_dir_prefix}}1/automated/network/extractions/egress-tls.csv"
             ;;
         *) query_tls.py external --tier "$tier" ;;
     esac
@@ -508,16 +514,16 @@ network-tls-external tier="t2":
 network-inventory tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "MAC-IP inventory extraction not available for T1."
             echo "T1 uses 'just network-flows mac-ip t1' for MAC-IP mappings."
             exit 1
             ;;
         *)
             forensic_analysis.py network extract mac_ip_inventory --tier "$tier" --force
-            cat "work/tier${tier#t}/automated/network/extractions/${tier}-mac-ip-inventory.csv"
+            cat "work/{{work_dir_prefix}}${tier#?}/automated/network/extractions/${tier}-mac-ip-inventory.csv"
             ;;
     esac
 
@@ -525,16 +531,16 @@ network-inventory tier:
 network-router-detect tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "Router detection not available for T1."
             echo "See T1 network diagram: just network-diagram-ascii t1"
             exit 1
             ;;
         *)
             forensic_analysis.py network analyze router_detection --tier "$tier" --force
-            {{md}} "work/tier${tier#t}/automated/network/analysis/${tier}-router-detection.md"
+            {{md}} "work/{{work_dir_prefix}}${tier#?}/automated/network/analysis/${tier}-router-detection.md"
             ;;
     esac
 
@@ -542,16 +548,16 @@ network-router-detect tier:
 network-router-topology tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "Router topology analysis not available for T1."
             echo "See T1 network diagram: just network-diagram-ascii t1"
             exit 1
             ;;
         *)
             forensic_analysis.py network analyze router_analysis --tier "$tier" --force
-            {{md}} "work/tier${tier#t}/automated/network/analysis/${tier}-router-analysis.md"
+            {{md}} "work/{{work_dir_prefix}}${tier#?}/automated/network/analysis/${tier}-router-analysis.md"
             ;;
     esac
 
@@ -562,17 +568,17 @@ network-router-full tier: (network-router-detect tier) (network-router-topology 
 network-files-transfers tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "File transfer analysis not available for T1."
             echo "T1 triage packages include pre-extracted file listings."
-            echo "Check: work/tier1/automated/disk/extractions/"
+            echo "Check: work/{{work_dir_prefix}}1/automated/disk/extractions/"
             exit 1
             ;;
         *)
             forensic_analysis.py network analyze file_transfers --tier "$tier" --force
-            {{md}} "work/tier${tier#t}/automated/network/analysis/${tier}-file-transfers.md"
+            {{md}} "work/{{work_dir_prefix}}${tier#?}/automated/network/analysis/${tier}-file-transfers.md"
             ;;
     esac
 
@@ -580,17 +586,17 @@ network-files-transfers tier:
 network-files-malware tier:
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
     case "$tier" in
-        t1)
+        t1|l1)
             echo "Malware scan not available for T1."
             echo "T1 triage packages include pre-extracted malware analysis."
-            echo "Check: work/tier1/automated/disk/extractions/"
+            echo "Check: work/{{work_dir_prefix}}1/automated/disk/extractions/"
             exit 1
             ;;
         *)
             forensic_analysis.py network analyze malware_scan --tier "$tier" --force
-            {{md}} "work/tier${tier#t}/automated/network/analysis/${tier}-malware-scan.md"
+            {{md}} "work/{{work_dir_prefix}}${tier#?}/automated/network/analysis/${tier}-malware-scan.md"
             ;;
     esac
 
@@ -601,55 +607,55 @@ network-files-malware tier:
 # Query packets by IP address: just network-query-ip <tier> <ip>
 network-query-ip tier ip:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py query "$db" --ip {{ip}}
 
 # Query packets by MAC address: just network-query-mac <tier> <mac>
 network-query-mac tier mac:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py query "$db" --mac {{mac}}
 
 # Query packets by port number: just network-query-port <tier> <port>
 network-query-port tier port:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py query "$db" --port {{port}}
 
 # Query packets by JA3 hash: just network-query-ja3 <tier> <hash>
 network-query-ja3 tier hash:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py query "$db" --ja3 {{hash}}
 
 # Execute custom SQL query on packet database: just network-query-sql <tier> "<query>"
 network-query-sql tier query:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py query "$db" --sql "{{query}}"
 
 # Show packet database statistics: just network-stats [tier]
-network-stats tier="t2":
+network-stats tier=default_net_tier:
     #!/usr/bin/env bash
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    db="work/tier${tier#t}/automated/network/packets.db"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    db="work/{{work_dir_prefix}}${tier#?}/automated/network/packets.db"
     pcap_index.py stats "$db"
 
 # =============================================================================
 # PCAP Indexing (reads artifact paths from config/artifacts.yaml)
 # =============================================================================
 
-# Index PCAPs into SQLite database (single tier only): just network-index t1|t2|t3
-network-index tier="t2":
+# Index PCAPs into SQLite database (single tier only): just network-index [tier]
+network-index tier=default_net_tier:
     #!/usr/bin/env bash
     set -e
-    tier="{{tier}}"; [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    dbdir="work/tier${tier#t}"
+    tier="{{tier}}"; [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    dbdir="work/{{work_dir_prefix}}${tier#?}"
     DB="$dbdir/automated/network/packets.db"
     mkdir -p "$(dirname "$DB")"
     rm -f "$DB"  # Start fresh
@@ -719,206 +725,206 @@ viz-list:
 # List large files in KAPE extraction: just kape-files [t1|t2|t3]
 kape-files *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py files --tier "$tier" $extra
 
 # Live system state (system info + files + processes + network): just kape-live [t1|t2|t3]
 kape-live *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py live --tier "$tier" $extra
 
 # PowerShell console history: just kape-ps-hist [tier]
-kape-ps-hist tier="t2":
+kape-ps-hist tier=default_net_tier:
     query_kape.py ps-hist --tier {{tier}}
 
 # Program usage timeline (compact by default): just kape-timeline [t1|t2|t3] [--detailed]
 kape-timeline *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py timeline --tier "$tier" --compact $extra
 
 # Windows Timeline (ActivitiesCache.db): just kape-activities [t1|t2|t3]
 kape-activities *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py activities --tier "$tier" $extra
 
 # Browser history (Firefox/Edge): just kape-browser [t1|t2|t3]
 kape-browser *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py browser --tier "$tier" $extra
 
 # Extract Security.evtx to CSV: just kape-evtx-extract [t1|t2|t3]
 kape-evtx-extract *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py evtx-extract --tier "$tier" $extra
 
 # EVTX timeline: events per day: just kape-evtx-timeline <log> [t1|t2|t3] [--hourly] [--from DATE] [--to DATE]
 kape-evtx-timeline log *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py evtx-timeline {{log}} --tier "$tier" $extra
 
 # Security.evtx event summary (count by event ID): just kape-evtx [t1|t2|t3]
 kape-evtx *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py evtx-summary --tier "$tier" $extra
 
 # Logon events (4624): just kape-logons [t1|t2|t3]
 kape-logons *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py evtx-logons --tier "$tier" $extra
 
 # Explicit credential logons (4648) - lateral movement: just kape-lateral [t1|t2|t3]
 kape-lateral *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py evtx-lateral --tier "$tier" $extra
 
 # Prefetch analysis: just kape-prefetch [t1|t2|t3]
 kape-prefetch *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py prefetch --tier "$tier" $extra
 
 # Amcache program entries: just kape-amcache [t1|t2|t3]
 kape-amcache *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py amcache --tier "$tier" $extra
 
 # Check Amcache hashes against CIRCL hashlookup: just kape-amcache-malware [t1|t2|t3]
 kape-amcache-malware *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py amcache-hash-check --tier "$tier" $extra
 
 # User accounts: just kape-users [tier]
-kape-users tier="t2":
+kape-users tier=default_net_tier:
     query_kape.py users --tier {{tier}}
 
 # Windows services: just kape-services [t1|t2|t3]
 kape-services *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py services --tier "$tier" $extra
 
 # UserAssist (GUI execution): just kape-userassist [t1|t2|t3]
 kape-userassist *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py userassist --tier "$tier" $extra
 
 # Recent documents: just kape-recentdocs [t1|t2|t3]
 kape-recentdocs *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py recentdocs --tier "$tier" $extra
 
 # Jump list analysis: just kape-jumplists [t1|t2|t3]
 kape-jumplists *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py jumplists --tier "$tier" $extra
 
 # DLL load analysis from Prefetch: just kape-dlls [t1|t2|t3] [exe-name|--raw]
 kape-dlls *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py dlls --tier "$tier" $extra
 
 # DLL load timeline: just kape-dll-timeline [t1|t2|t3] [--hourly] [--from DATE] [--to DATE]
 kape-dll-timeline *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py dll-timeline --tier "$tier" $extra
 
 # File system timeline (LNK + Amcache + Prefetch): just kape-fstimeline [t1|t2|t3] [--search term]
 kape-fstimeline *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py fstimeline --tier "$tier" $extra
 
 # Process snapshots (CIM and Get-Process CSVs): just kape-ps [t1|t2|t3]
 kape-ps *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py ps --tier "$tier" $extra
 
 # Deleted files (Recycle Bin): just kape-deleted [t1|t2|t3]
 kape-deleted *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py deleted --tier "$tier" $extra
 
@@ -929,81 +935,81 @@ kape-deleted *args:
 # Registry overview: just kape-reg-overview [t1|t2|t3] [--raw]
 kape-reg-overview *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py registry-overview --tier "$tier" $extra
 
 # Mounted devices (USB/drive history): just kape-reg-devices [t1|t2|t3]
 kape-reg-devices *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py mounted-devices --tier "$tier" $extra
 
 # Known networks (WiFi/network profiles): just kape-reg-networks [t1|t2|t3]
 kape-reg-networks *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py known-networks --tier "$tier" $extra
 
 # RDP connection history: just kape-reg-rdp [t1|t2|t3]
 kape-reg-rdp *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py rdp-history --tier "$tier" $extra
 
 # File Open/Save dialog history: just kape-reg-opensave [t1|t2|t3]
 kape-reg-opensave *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py opensave --tier "$tier" $extra
 
 # Last visited folders per application: just kape-reg-lastvisited [t1|t2|t3]
 kape-reg-lastvisited *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py lastvisited --tier "$tier" $extra
 
 # Win+R run dialog history: just kape-reg-run [t1|t2|t3]
 kape-reg-run *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py run-history --tier "$tier" $extra
 
 # ShellBags — folder browsing history: just kape-reg-shellbags [t1|t2|t3]
 kape-reg-shellbags *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py shellbags --tier "$tier" $extra
 
 # NTUSER.DAT Run/RunOnce keys (persistence check): just kape-reg-autorun [t1|t2|t3]
 kape-reg-autorun *args:
     #!/usr/bin/env bash
-    tier="t2"; extra=""
+    tier="{{default_net_tier}}"; extra=""
     for arg in {{args}}; do
-        [[ "$arg" =~ ^t[0-9]+$ ]] && tier="$arg" || extra="$extra $arg"
+        [[ "$arg" =~ {{tier_pattern}} ]] && tier="$arg" || extra="$extra $arg"
     done
     query_kape.py ntuser-autorun --tier "$tier" $extra
 
@@ -1086,8 +1092,8 @@ disk-extract-raw partition output:
 file-analyze-binary tier file name="":
     #!/usr/bin/env bash
     tier="{{tier}}"
-    [[ "$tier" =~ ^t[0-9]+$ ]] || { echo "Invalid tier: $tier"; exit 1; }
-    outdir="work/tier${tier#t}/manual/binary-analysis"
+    [[ "$tier" =~ {{tier_pattern}} ]] || { echo "Invalid tier: $tier"; exit 1; }
+    outdir="work/{{work_dir_prefix}}${tier#?}/manual/binary-analysis"
     mkdir -p "$outdir"
     if [ -n "{{name}}" ]; then
         python -m scripts.forensic_analysis.binary analyze "{{file}}" -o "$outdir" -n "{{name}}"
@@ -1111,3 +1117,11 @@ test *args:
     else
         pytest tests/ -v --tb=short
     fi
+
+# =============================================================================
+# Investigation Log Management
+# =============================================================================
+
+# Investigation log: add "title", show [date], list, lock, migrate [file], init
+inv-log *args:
+    investigation-log.sh {{args}}

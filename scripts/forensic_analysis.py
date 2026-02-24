@@ -94,8 +94,16 @@ Examples:
                         help='Command to run')
     parser.add_argument('target', nargs='?', default='all',
                         help='Target step or "all"')
-    parser.add_argument('--tier', '-t', default='t1',
-                        help='Artifact tier (t1, t2, or t3)')
+    # Dynamic default tier from project config
+    try:
+        from forensic_analysis.base import get_available_tiers
+        available = get_available_tiers()
+    except Exception:
+        available = []
+    default_tier = available[0] if available else 't1'
+
+    parser.add_argument('--tier', '-t', default=default_tier,
+                        help=f'Artifact tier (default: {default_tier})')
     # Legacy alias
     parser.add_argument('--level', '-l', default=None,
                         help=argparse.SUPPRESS)
@@ -111,28 +119,23 @@ Examples:
     # Support legacy --level flag
     tier_str = args.level if args.level is not None else args.tier
 
-    # Convert tier format: t1/t2/t3/... -> 1/2/3/... (accept tN, lN, or N)
-    if tier_str.startswith('t') and tier_str[1:].isdigit():
-        tier = int(tier_str[1:])
-    elif tier_str.startswith('l') and tier_str[1:].isdigit():
-        tier = int(tier_str[1:])
-    elif tier_str.isdigit():
-        tier = int(tier_str)
-    else:
-        print(f"Invalid tier: {tier_str}. Use t1, t2, t3, ...")
+    # Pass tier string directly (e.g., 't1', 'l2') — no int conversion
+    import re
+    if not re.match(r'^[tl]\d+$', tier_str):
+        print(f"Invalid tier: {tier_str}. Use t1, t2, l1, l2, ...")
         return 1
 
     # Create appropriate analyzer and get module-specific functions
     try:
         if args.module == 'memory':
             from forensic_analysis.memory import MemoryAnalyzer, run_extraction, run_analysis
-            analyzer = MemoryAnalyzer(tier=tier)
+            analyzer = MemoryAnalyzer(tier=tier_str)
         elif args.module == 'network':
             from forensic_analysis.network import NetworkAnalyzer, run_extraction, run_analysis
-            analyzer = NetworkAnalyzer(tier=tier)
+            analyzer = NetworkAnalyzer(tier=tier_str)
         elif args.module == 'disk':
             from forensic_analysis.disk import DiskAnalyzer, run_extraction, run_analysis
-            analyzer = DiskAnalyzer(tier=tier)
+            analyzer = DiskAnalyzer(tier=tier_str)
         else:
             print(f"Unknown module: {args.module}")
             return 1

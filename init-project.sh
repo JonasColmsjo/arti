@@ -321,32 +321,13 @@ else
     echo "  Skipped: .gitignore (already exists)"
 fi
 
-# Create INVESTIGATION-LOG.md
+# Create investigation-log/ directory
 echo -e "${GREEN}Creating investigation log...${NC}"
-if [ ! -f "INVESTIGATION-LOG.md" ]; then
-    cat > INVESTIGATION-LOG.md << 'EOF'
-# Investigation Log
-
-APPEND-ONLY: Document all significant actions in real-time.
-
-## Format
-
-```
-### YYYY-MM-DD HH:MM UTC - [Phase] Action Summary
-
-**What**: Brief description of what was done
-**Why**: Rationale for this action
-**Result**: Key findings or outcome
-**Next**: Suggested next steps
-**Files**: Any files created or modified
-```
-
----
-
-EOF
-    echo "  Created: INVESTIGATION-LOG.md"
+if [ ! -d "investigation-log" ]; then
+    investigation-log.sh init
+    echo "  Created: investigation-log/"
 else
-    echo "  Skipped: INVESTIGATION-LOG.md (already exists)"
+    echo "  Skipped: investigation-log/ (already exists)"
 fi
 
 # Initialize git if not exists
@@ -378,7 +359,7 @@ echo "  │   └── final-report/  # Human-only final submission"
 echo "  ├── .envrc            # Environment variables"
 echo "  ├── CLAUDE.md         # Claude Code instructions"
 echo "  ├── justfile          # Just commands"
-echo "  └── INVESTIGATION-LOG.md"
+echo "  └── investigation-log/"
 echo
 echo -e "${YELLOW}Next steps:${NC}"
 echo "  1. Install dependencies: just -f $SCRIPT_DIR/justfile install-deps"

@@ -831,12 +831,18 @@ def main():
     )
     subparsers = parser.add_subparsers(dest='command', required=True)
 
+    # Dynamic tier choices from project config
+    try:
+        from forensic_analysis.base import get_available_tiers
+        _tiers = get_available_tiers() or ['t1', 't2', 't3']
+    except Exception:
+        _tiers = ['t1', 't2', 't3']
+
     # Index command
     index_parser = subparsers.add_parser('index', help='Index a PCAP file')
     index_parser.add_argument('pcap', help='PCAP file to index')
     index_parser.add_argument('--db', help='Output database path (default: pcap_index.db)')
-    index_parser.add_argument('--tier', choices=['t1', 't2', 't3'], help='Artifact tier')
-    index_parser.add_argument('--level', dest='tier', choices=['l1', 'l2', 'l3'], help=argparse.SUPPRESS)
+    index_parser.add_argument('--tier', '--level', choices=_tiers, help='Artifact tier')
     index_parser.add_argument('--artifact', help='Source artifact path (e.g., Tier_2_Artifacts/capture1.pcap)')
     index_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
 
@@ -844,8 +850,7 @@ def main():
     query_parser = subparsers.add_parser('query', help='Query the index')
     query_parser.add_argument('db', help='Database file')
     query_parser.add_argument('--artifact', '-a', help='Filter by source artifact (e.g., capture1.pcap)')
-    query_parser.add_argument('--tier', '-t', choices=['t1', 't2', 't3'], help='Filter by artifact tier')
-    query_parser.add_argument('--level', '-l', dest='tier', choices=['l1', 'l2', 'l3'], help=argparse.SUPPRESS)
+    query_parser.add_argument('--tier', '--level', '-t', choices=_tiers, help='Filter by artifact tier')
     query_group = query_parser.add_mutually_exclusive_group(required=True)
     query_group.add_argument('--frame', type=int, help='Query by frame number')
     query_group.add_argument('--ip', help='Query by IP address')

@@ -77,12 +77,18 @@ class InvestigationCriteria:
         if artifacts_file.exists():
             with open(artifacts_file) as f:
                 artifacts = yaml.safe_load(f) or {}
-                # Map t1/t2/t3 keys to tier1/tier2/tier3
-                data['artifacts'] = {
-                    'tier1': artifacts.get('t1', {}),
-                    'tier2': artifacts.get('t2', {}),
-                    'tier3': artifacts.get('t3', {}),
-                }
+                # Map tier keys (t1/t2/t3 or l1/l2/l3) to tier1/tier2/tier3
+                tiers_cfg = get_tiers_config()
+                if tiers_cfg:
+                    data['artifacts'] = {
+                        f'tier{i+1}': artifacts.get(k, {})
+                        for i, k in enumerate(sorted(tiers_cfg.keys()))
+                    }
+                else:
+                    data['artifacts'] = {
+                        f'tier{i+1}': artifacts.get(k, {})
+                        for i, k in enumerate(['t1', 't2', 't3']) if k in artifacts
+                    }
 
         return data
 
@@ -312,7 +318,7 @@ def get_tiers_config() -> dict:
     if settings_file.exists():
         with open(settings_file) as f:
             settings = yaml.safe_load(f) or {}
-            return settings.get('tiers', {})
+            return settings.get('tiers', settings.get('levels', {}))
     return {}
 
 
@@ -413,9 +419,14 @@ class ForensicAnalyzer(ABC):
             tier: Tier identifier (str like 't1', 't2' or int like 1, 2 for backwards compat)
             module_name: Module name ('network', 'disk', 'memory')
         """
-        # Handle both string ('t1') and int (1) tier identifiers
+        # Handle both string ('t1', 'l2') and int (1, 2) tier identifiers
         if isinstance(tier, int):
-            self.tier_str = f't{tier}'
+            # Look up actual tier name from config (e.g., int 1 → 'l1' or 't1')
+            available = get_available_tiers()
+            if available and tier <= len(available):
+                self.tier_str = sorted(available)[tier - 1]
+            else:
+                self.tier_str = f't{tier}'
             self.tier = tier
         else:
             self.tier_str = tier
